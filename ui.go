@@ -29,16 +29,20 @@ const (
 	modeSearch
 )
 
+// Colors for these styles are no longer hardcoded here: applyTheme (in
+// theme.go) overwrites each Foreground() at startup based on theme.json.
+// The values below are placeholders only, defaultTheme() in theme.go is the
+// source of truth for defaults.
 var (
-	nameStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "25", Dark: "39"})
-	faintStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "245", Dark: "243"})
-	cursorStyle   = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "205", Dark: "213"})
+	nameStyle     = lipgloss.NewStyle().Bold(true)
+	faintStyle    = lipgloss.NewStyle()
+	cursorStyle   = lipgloss.NewStyle()
 	headerStyle   = lipgloss.NewStyle().Bold(true).Reverse(true)
-	statusStyle   = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "22", Dark: "114"})
-	errorStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "124", Dark: "203"})
-	replyToStyle  = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "94", Dark: "179"})
-	likedStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "162", Dark: "205"})
-	linkStyle     = lipgloss.NewStyle().Underline(true).Foreground(lipgloss.AdaptiveColor{Light: "26", Dark: "45"})
+	statusStyle   = lipgloss.NewStyle()
+	errorStyle    = lipgloss.NewStyle()
+	replyToStyle  = lipgloss.NewStyle()
+	likedStyle    = lipgloss.NewStyle()
+	linkStyle     = lipgloss.NewStyle().Underline(true)
 	helpKeyStyle  = lipgloss.NewStyle().Bold(true).Width(12)
 	composeBorder = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1)
 )

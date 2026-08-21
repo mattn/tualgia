@@ -154,6 +154,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	theme, err := loadTheme(profile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to parse %s, using default theme: %v\n", themeFileName(profile), err)
+	}
+	applyTheme(theme)
+
 	client, err := newClient(cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
