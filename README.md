@@ -43,6 +43,28 @@ Search uses relays configured with `"search": true`; when none is
 configured it falls back to `wss://search.nos.today`. Search results are
 browsable like the timeline, and `esc` brings the timeline back.
 
+### Theme
+
+Colors can be customized with `theme.json` (or `theme-<profile>.json`),
+looked up in the same directories as `config.json`:
+
+```json
+{
+  "name":    {"light": "#0f4c81", "dark": "#7aa2f7"},
+  "faint":   {"light": "245",     "dark": "243"},
+  "cursor":  {"light": "205",     "dark": "213"},
+  "status":  {"light": "22",      "dark": "114"},
+  "error":   {"light": "124",     "dark": "203"},
+  "replyTo": {"light": "94",      "dark": "179"},
+  "liked":   {"light": "162",     "dark": "205"},
+  "link":    {"light": "26",      "dark": "45"}
+}
+```
+
+Values are ANSI256 indexes (as strings or numbers) or hex codes. Omitted
+keys keep the built-in colors; a side set to `""` keeps the terminal's
+default foreground.
+
 `i` renders the images referenced by the selected note with
 [sixel](https://en.wikipedia.org/wiki/Sixel); it requires a sixel capable
 terminal. Any key returns to the timeline. Web URLs open with `wslview` /

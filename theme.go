@@ -2,16 +2,45 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/charmbracelet/lipgloss"
 )
 
-// ColorPair is a Light/Dark color pair for lipgloss.AdaptiveColor.
+// Color is a terminal color in any form lipgloss accepts: an ANSI256 index
+// ("205") or a hex code ("#ff00ff"). JSON numbers are also accepted for
+// ANSI indexes, so {"light": 25} and {"light": "25"} are equivalent.
+type Color string
+
+func (c *Color) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err == nil {
+		*c = Color(s)
+		return nil
+	}
+	var n json.Number
+	if err := json.Unmarshal(b, &n); err == nil {
+		*c = Color(n.String())
+		return nil
+	}
+	return fmt.Errorf("invalid color %s", string(b))
+}
+
+// ColorPair is a Light/Dark color pair for lipgloss.AdaptiveColor. A side
+// set to "" explicitly keeps the terminal's default foreground; omitted
+// keys keep the built-in colors because loadTheme unmarshals over
+// defaultTheme.
 type ColorPair struct {
-	Light string `json:"light"`
-	Dark  string `json:"dark"`
+	Light Color `json:"light"`
+	Dark  Color `json:"dark"`
+}
+
+func (c ColorPair) adaptive() lipgloss.AdaptiveColor {
+	return lipgloss.AdaptiveColor{Light: string(c.Light), Dark: string(c.Dark)}
 }
 
 // Theme holds all user-customizable colors. Fields correspond 1:1 to the
@@ -41,19 +70,11 @@ func defaultTheme() Theme {
 	}
 }
 
-// themeFileName returns the theme.json path for the given profile, mirroring
-// the config-<profile>.json naming used by loadConfig in main.go.
-func themeFileName(profile string) string {
-	if profile != "" {
-		return "theme-" + profile + ".json"
-	}
-	return "theme.json"
-}
-
-// loadTheme reads theme.json from the tualgia config dir (falling back to
-// algia's dir, same as loadConfig). Missing file: returns defaultTheme with
-// no error. Malformed file: returns defaultTheme and the parse error, so the
-// caller can decide whether to warn the user.
+// loadTheme reads theme.json (or theme-<profile>.json) with the same lookup
+// order as loadConfig: the tualgia config dir first, then algia's, so the
+// theme can live next to whichever config is in use. A missing file is not
+// an error; any other failure returns defaults along with the error so the
+// caller can warn.
 func loadTheme(profile string) (Theme, error) {
 	theme := defaultTheme()
 
@@ -61,13 +82,20 @@ func loadTheme(profile string) (Theme, error) {
 	if err != nil {
 		return theme, err
 	}
+	fname := profileFileName("theme", profile)
 
-	fname := themeFileName(profile)
-
-	b, readErr := os.ReadFile(filepath.Join(dir, name, fname))
+	var b []byte
+	readErr := error(fs.ErrNotExist)
+	for _, app := range []string{name, "algia"} {
+		if b, readErr = os.ReadFile(filepath.Join(dir, app, fname)); readErr == nil {
+			break
+		}
+	}
 	if readErr != nil {
-		// No theme.json: use defaults, this is not an error condition.
-		return theme, nil
+		if errors.Is(readErr, fs.ErrNotExist) {
+			return theme, nil
+		}
+		return theme, readErr
 	}
 
 	if err := json.Unmarshal(b, &theme); err != nil {
@@ -76,31 +104,16 @@ func loadTheme(profile string) (Theme, error) {
 	return theme, nil
 }
 
-// pair converts a ColorPair to lipgloss.AdaptiveColor, falling back to the
-// default value for any side left empty in theme.json.
-func (c ColorPair) pair(fallback ColorPair) lipgloss.AdaptiveColor {
-	light, dark := c.Light, c.Dark
-	if light == "" {
-		light = fallback.Light
-	}
-	if dark == "" {
-		dark = fallback.Dark
-	}
-	return lipgloss.AdaptiveColor{Light: light, Dark: dark}
-}
-
 // applyTheme overwrites the package-level style variables in ui.go with the
 // colors from theme. Must be called once at startup before the bubbletea
 // program starts rendering.
 func applyTheme(theme Theme) {
-	def := defaultTheme()
-
-	nameStyle = nameStyle.Foreground(theme.Name.pair(def.Name))
-	faintStyle = faintStyle.Foreground(theme.Faint.pair(def.Faint))
-	cursorStyle = cursorStyle.Foreground(theme.Cursor.pair(def.Cursor))
-	statusStyle = statusStyle.Foreground(theme.Status.pair(def.Status))
-	errorStyle = errorStyle.Foreground(theme.Error.pair(def.Error))
-	replyToStyle = replyToStyle.Foreground(theme.ReplyTo.pair(def.ReplyTo))
-	likedStyle = likedStyle.Foreground(theme.Liked.pair(def.Liked))
-	linkStyle = linkStyle.Foreground(theme.Link.pair(def.Link))
+	nameStyle = nameStyle.Foreground(theme.Name.adaptive())
+	faintStyle = faintStyle.Foreground(theme.Faint.adaptive())
+	cursorStyle = cursorStyle.Foreground(theme.Cursor.adaptive())
+	statusStyle = statusStyle.Foreground(theme.Status.adaptive())
+	errorStyle = errorStyle.Foreground(theme.Error.adaptive())
+	replyToStyle = replyToStyle.Foreground(theme.ReplyTo.adaptive())
+	likedStyle = likedStyle.Foreground(theme.Liked.adaptive())
+	linkStyle = linkStyle.Foreground(theme.Link.adaptive())
 }

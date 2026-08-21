@@ -68,6 +68,16 @@ func configDir() (string, error) {
 	}
 }
 
+// profileFileName returns "<base>.json", or "<base>-<profile>.json" when a
+// profile is given. All per-profile files (config, profiles, theme) share
+// this naming convention.
+func profileFileName(base, profile string) string {
+	if profile != "" {
+		return base + "-" + profile + ".json"
+	}
+	return base + ".json"
+}
+
 // loadConfig loads the configuration for profile. It looks in the tualgia
 // config directory first and falls back to algia's, so an existing algia
 // setup works as-is.
@@ -77,12 +87,8 @@ func loadConfig(profile string) (*Config, error) {
 		return nil, err
 	}
 
-	cname := "config.json"
-	pname := "profiles.json"
-	if profile != "" {
-		cname = "config-" + profile + ".json"
-		pname = "profiles-" + profile + ".json"
-	}
+	cname := profileFileName("config", profile)
+	pname := profileFileName("profiles", profile)
 
 	var b []byte
 	var appDir string
@@ -156,7 +162,7 @@ func main() {
 
 	theme, err := loadTheme(profile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: failed to parse %s, using default theme: %v\n", themeFileName(profile), err)
+		fmt.Fprintf(os.Stderr, "warning: failed to load %s, using default theme: %v\n", profileFileName("theme", profile), err)
 	}
 	applyTheme(theme)
 
